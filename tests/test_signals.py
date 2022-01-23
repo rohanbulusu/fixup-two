@@ -2,9 +2,12 @@ import gc
 import sys
 import time
 
+import sys, os.path
+parent_dir = os.path.dirname(os.path.dirname(__file__))
+sys.path.insert(0, parent_dir)
 import blinker
 
-from nose.tools import assert_raises
+from pytest import raises
 
 
 jython = sys.platform.startswith('java')
@@ -232,7 +235,9 @@ def test_meta_connect_failure():
         pass
     sig = blinker.Signal()
 
-    assert_raises(TypeError, sig.connect, receiver)
+    with raises(TypeError):
+        sig.connect(receiver)
+    
     assert not sig.receivers
     assert not sig._by_receiver
     assert sig._by_sender == {blinker.base.ANY_ID: set()}

@@ -1,5 +1,8 @@
 import asyncio
 
+import sys, os.path
+parent_dir = os.path.dirname(os.path.dirname(__file__))
+sys.path.insert(0, parent_dir)
 import blinker
 
 
@@ -41,3 +44,5 @@ def test_send_async():
     assert set(calls) == set(expected.keys())
     collected_results = {v.result() for r, v in results}
     assert collected_results == set(expected.values())
+
+test_send_async()

@@ -1,5 +1,8 @@
 import pickle
 
+import sys, os.path
+parent_dir = os.path.dirname(os.path.dirname(__file__))
+sys.path.insert(0, parent_dir)
 from blinker._utilities import symbol
 
 

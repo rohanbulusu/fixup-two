@@ -1,5 +1,8 @@
 from __future__ import with_statement
 
+import sys, os.path
+parent_dir = os.path.dirname(os.path.dirname(__file__))
+sys.path.insert(0, parent_dir)
 from blinker import Signal
 
 
