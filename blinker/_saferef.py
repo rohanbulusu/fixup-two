@@ -149,16 +149,12 @@ class BoundMethodWeakref:
 
     @staticmethod
     def get_instance_key(target):
-        """Calculate the reference key for the given target"""
-        return hash(id(target.__self__), id(target.__func__))
+        """calculates the reference key for the given target"""
+        return hash((id(target.__self__), id(target.__func__)))
 
     def __repr__(self):
-        """Give a friendly representation of the object."""
-        return "{}({}.{})".format(
-            self.__class__.__name__,
-            self.self_name,
-            self.func_name,
-            )
+
+        return f'{self.__class__.__name__}({self.self_name}.{self.func_name})'
 
     def __nonzero__(self):
         """Whether we are still a valid reference."""
