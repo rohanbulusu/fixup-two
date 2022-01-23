@@ -61,54 +61,25 @@ def safe_ref(target, on_delete=None):
 
 
 class BoundMethodWeakref:
-    """'Safe' and reusable weak references to instance methods.
+    """'Safe' and reusable weak references to instance methods"""
 
-    BoundMethodWeakref objects provide a mechanism for referencing a
-    bound method without requiring that the method object itself
-    (which is normally a transient object) is kept alive.  Instead,
-    the BoundMethodWeakref object keeps weak references to both the
-    object and the function which together define the instance method.
-
-    Attributes:
-
-    - ``key``: The identity key for the reference, calculated by the
-      class's get_instance_key method applied to the target instance method.
-
-    - ``deletion_methods``: Sequence of callable objects taking single
-      argument, a reference to this object which will be called when
-      *either* the target object or target function is garbage
-      collected (i.e. when this object becomes invalid).  These are
-      specified as the on_delete parameters of safe_ref calls.
-
-    - ``weak_self``: Weak reference to the target object.
-
-    - ``weak_func``: Weak reference to the target function.
-
-    Class Attributes:
-
-    - ``_all_instances``: Class attribute pointing to all live
-      BoundMethodWeakref objects indexed by the class's
-      get_instance_key(target) method applied to the target objects.
-      This weak value dictionary is used to short-circuit creation so
-      that multiple references to the same (object, function) pair
-      produce the same BoundMethodWeakref instance.
-    """
-
+    # repository of all instantiated BoundMethodWeakrefs
     _all_instances = weakref.WeakValueDictionary()
 
-    def __new__(cls, target, on_delete=None, *arguments, **named):
+    def __new__(cls, target, on_delete=None):
         """interrupts normal object creation process to add the instance to _all_instances"""
 
-        instance_key = cls.get_instance_key(target)
+        instance_hash = cls.get_instance_key(target)
 
-        # if 'target' is already in _all_instances for whatever reason
-        if instance_key in cls._all_instances:
-            current = cls._all_instances.get(instance_key)
-            current.deletion_methods.append(on_delete)
-            return current
+        # if 'target' is already in _all_instances, add the 'on_delete' cleanup if specified
+        if instance_hash in cls._all_instances:
+            existing_obj = cls._all_instances[instance_hash]
+            if on_delete:
+                existing_obj.cleanup_methods.append(on_delete)
+            return cls._all_instances[instance_hash]
 
         obj = super().__new__(cls)
-        cls._all_instances[instance_key] = obj
+        cls._all_instances[instance_hash] = obj
         return obj
 
     def __init__(self, target, on_delete=None):
@@ -123,7 +94,7 @@ class BoundMethodWeakref:
           object or the function is garbage collected); should take a single
           argument
         """
-        self.deletion_methods = [on_delete] if on_delete else []
+        self.cleanup_methods = [on_delete] if on_delete else []
         self.key = self.get_instance_key(target)
 
         self.weak_self = weakref.ref(target.__self__, self._remove)
@@ -139,12 +110,12 @@ class BoundMethodWeakref:
         # remove the instance from BoundMethodWeakref._all_instances
         del self.__class__._all_instances[self.key]
 
-        # run all the cleanup methods in self.deletion_methods
-        for cleanup_method in self.deletion_methods:
+        # run all the cleanup methods in self.cleanup_methods
+        for cleanup_method in self.cleanup_methods:
             cleanup_method(self)
 
         # remove all references to the BoundMethodWeakref's cleanup methods
-        del self.deletion_methods
+        del self.cleanup_methods
 
     @staticmethod
     def get_instance_key(target):
@@ -167,7 +138,7 @@ class BoundMethodWeakref:
         This method may be called any number of times, as it does
         not invalidate the reference
         """
-        
+
         target = self.weak_self()
         function = self.weak_func()
         return function.__get__(target)
