@@ -160,15 +160,14 @@ class BoundMethodWeakref:
         return cmp(self.key, other.key)
 
     def __call__(self):
-        """Return a strong reference to the bound method.
+        """Returns a strong reference (specifically, a bound instance method)
+           for our object and function
 
-        If the target cannot be retrieved, then will return None,
-        otherwise returns a bound instance method for our object and
-        function.
-
-        Note: You may call this method any number of times, as it does
-        not invalidate the reference.
+        NOTE:
+        This method may be called any number of times, as it does
+        not invalidate the reference
         """
+        
         target = self.weak_self()
         function = self.weak_func()
         return function.__get__(target)
