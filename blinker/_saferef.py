@@ -123,35 +123,28 @@ class BoundMethodWeakref:
           object or the function is garbage collected); should take a single
           argument
         """
-
-        self.deletion_methods = [on_delete]
+        self.deletion_methods = [on_delete] if on_delete else []
         self.key = self.get_instance_key(target)
 
         self.weak_self = weakref.ref(target.__self__, self._remove)
         self.weak_func = weakref.ref(target.__func__, self._remove)
-        
+
         self.self_name = str(target.__self__)
         self.func_name = str(target.__func__)
 
     def _remove(self, weak):
-        """Set self.isDead to True when method or instance is destroyed."""
-        methods = self.deletion_methods[:]
-        del self.deletion_methods[:]
-        try:
-            del self.__class__._all_instances[self.key]
-        except KeyError:
-            pass
-        for function in methods:
-            try:
-                if callable(function):
-                    function(self)
-            except Exception:
-                try:
-                    traceback.print_exc()
-                except AttributeError:
-                    e = sys.exc_info()[1]
-                    print ('Exception during saferef %s '
-                           'cleanup function %s: %s' % (self, function, e))
+        """delete all references to both the object's owner (__self__)
+           and the method instance (__func__)"""
+           
+        # remove the instance from BoundMethodWeakref._all_instances
+        del self.__class__._all_instances[self.key]
+
+        for cleanup_method in self.deletion_methods:
+            cleanup_method(self)
+
+        # remove all references to the BoundMethodWeakref's cleanup methods
+        del self.deletion_methods
+
 
     @staticmethod
     def get_instance_key(target):
