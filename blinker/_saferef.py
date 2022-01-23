@@ -38,11 +38,6 @@ import sys
 import traceback
 import weakref
 
-
-def callable(object):
-    return hasattr(object, '__call__')
-
-
 if sys.version_info < (3,):
     get_self = operator.attrgetter('im_self')
     get_func = operator.attrgetter('im_func')
