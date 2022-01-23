@@ -60,7 +60,7 @@ def safe_ref(target, on_delete=None):
     return weakref.ref(target)
 
 
-class BoundMethodWeakref(object):
+class BoundMethodWeakref:
     """'Safe' and reusable weak references to instance methods.
 
     BoundMethodWeakref objects provide a mechanism for referencing a
@@ -72,7 +72,7 @@ class BoundMethodWeakref(object):
     Attributes:
 
     - ``key``: The identity key for the reference, calculated by the
-      class's calculate_key method applied to the target instance method.
+      class's get_reference_key method applied to the target instance method.
 
     - ``deletion_methods``: Sequence of callable objects taking single
       argument, a reference to this object which will be called when
@@ -88,7 +88,7 @@ class BoundMethodWeakref(object):
 
     - ``_all_instances``: Class attribute pointing to all live
       BoundMethodWeakref objects indexed by the class's
-      calculate_key(target) method applied to the target objects.
+      get_reference_key(target) method applied to the target objects.
       This weak value dictionary is used to short-circuit creation so
       that multiple references to the same (object, function) pair
       produce the same BoundMethodWeakref instance.
@@ -97,26 +97,19 @@ class BoundMethodWeakref(object):
     _all_instances = weakref.WeakValueDictionary()
 
     def __new__(cls, target, on_delete=None, *arguments, **named):
-        """Create new instance or return current instance.
+        """interrupts normal object creation process to add the instance to _all_instances"""
 
-        Basically this method of construction allows us to
-        short-circuit creation of references to already- referenced
-        instance methods.  The key corresponding to the target is
-        calculated, and if there is already an existing reference,
-        that is returned, with its deletion_methods attribute updated.
-        Otherwise the new instance is created and registered in the
-        table of already-referenced methods.
-        """
-        key = cls.calculate_key(target)
-        current = cls._all_instances.get(key)
-        if current is not None:
+        instance_key = cls.get_reference_key(target)
+
+        # if 'target' is already in _all_instances for whatever reason
+        if instance_key in cls._all_instances:
+            current = cls._all_instances.get(instance_key)
             current.deletion_methods.append(on_delete)
             return current
-        else:
-            base = super(BoundMethodWeakref, cls).__new__(cls)
-            cls._all_instances[key] = base
-            base.__init__(target, on_delete, *arguments, **named)
-            return base
+
+        obj = super().__new__(cls)
+        cls._all_instances[instance_key] = obj
+        return obj
 
     def __init__(self, target, on_delete=None):
         """Return a weak-reference-like instance for a bound method.
@@ -154,7 +147,7 @@ class BoundMethodWeakref(object):
                         print ('Exception during saferef %s '
                                'cleanup function %s: %s' % (self, function, e))
         self.deletion_methods = [on_delete]
-        self.key = self.calculate_key(target)
+        self.key = self.get_reference_key(target)
         im_self = target.__self__
         im_func = target.__func__
         self.weak_self = weakref.ref(im_self, remove)
@@ -162,24 +155,22 @@ class BoundMethodWeakref(object):
         self.self_name = str(im_self)
         self.func_name = str(im_func.__name__)
 
-    def calculate_key(cls, target):
+    @staticmethod
+    def get_reference_key(target):
         """Calculate the reference key for this reference.
 
         Currently this is a two-tuple of the id()'s of the target
         object and the target function respectively.
         """
         return (id(target.__self__), id(target.__func__))
-    calculate_key = classmethod(calculate_key)
 
-    def __str__(self):
+    def __repr__(self):
         """Give a friendly representation of the object."""
         return "{}({}.{})".format(
             self.__class__.__name__,
             self.self_name,
             self.func_name,
             )
-
-    __repr__ = __str__
 
     def __nonzero__(self):
         """Whether we are still a valid reference."""
