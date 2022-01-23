@@ -155,7 +155,6 @@ class BoundMethodWeakref:
         return f'{self.__class__.__name__}({self.self_name}.{self.func_name})'
 
     def __cmp__(self, other):
-        """Compare with another reference."""
         if not isinstance(other, self.__class__):
             return cmp(self.__class__, type(other))
         return cmp(self.key, other.key)
@@ -171,8 +170,7 @@ class BoundMethodWeakref:
         not invalidate the reference.
         """
         target = self.weak_self()
-        if target is not None:
-            function = self.weak_func()
-            if function is not None:
-                return function.__get__(target)
-        return None
+
+        function = self.weak_func()
+        if function is not None:
+            return function.__get__(target)
