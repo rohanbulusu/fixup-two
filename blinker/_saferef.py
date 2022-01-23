@@ -170,7 +170,5 @@ class BoundMethodWeakref:
         not invalidate the reference.
         """
         target = self.weak_self()
-
         function = self.weak_func()
-        if function is not None:
-            return function.__get__(target)
+        return function.__get__(target)
