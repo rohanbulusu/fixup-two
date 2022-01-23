@@ -33,17 +33,9 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-import operator
 import sys
 import traceback
 import weakref
-
-if sys.version_info < (3,):
-    get_self = operator.attrgetter('im_self')
-    get_func = operator.attrgetter('im_func')
-else:
-    get_self = operator.attrgetter('__self__')
-    get_func = operator.attrgetter('__func__')
 
 
 def safe_ref(target, on_delete=None):
@@ -59,7 +51,7 @@ def safe_ref(target, on_delete=None):
       BoundMethodWeakref) as argument.
     """
     try:
-        im_self = get_self(target)
+        im_self = target.__self__
     except AttributeError:
         if callable(on_delete):
             return weakref.ref(target, on_delete)
@@ -171,8 +163,8 @@ class BoundMethodWeakref(object):
                                'cleanup function %s: %s' % (self, function, e))
         self.deletion_methods = [on_delete]
         self.key = self.calculate_key(target)
-        im_self = get_self(target)
-        im_func = get_func(target)
+        im_self = target.__self__
+        im_func = target.__func__
         self.weak_self = weakref.ref(im_self, remove)
         self.weak_func = weakref.ref(im_func, remove)
         self.self_name = str(im_self)
@@ -184,7 +176,7 @@ class BoundMethodWeakref(object):
         Currently this is a two-tuple of the id()'s of the target
         object and the target function respectively.
         """
-        return (id(get_self(target)), id(get_func(target)))
+        return (id(target.__self__), id(target.__func__))
     calculate_key = classmethod(calculate_key)
 
     def __str__(self):
