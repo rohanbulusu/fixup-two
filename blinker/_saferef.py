@@ -39,33 +39,25 @@ import weakref
 
 
 def safe_ref(target, on_delete=None):
-    """Return a *safe* weak reference to a callable target.
-
-    - ``target``: The object to be weakly referenced, if it's a bound
-      method reference, will create a BoundMethodWeakref, otherwise
-      creates a simple weakref.
-
-    - ``on_delete``: If provided, will have a hard reference stored to
-      the callable to be called after the safe reference goes out of
-      scope with the reference object, (either a weakref or a
-      BoundMethodWeakref) as argument.
+    """wraps a *safe* reference in a weakref
+    target: the object to be wrapped in a weak reference
+    on_delete: if provided, stores a hard reference to 'target' which will be
+               called after the safe reference goes out of scope
     """
-    try:
-        im_self = target.__self__
-    except AttributeError:
-        if callable(on_delete):
-            return weakref.ref(target, on_delete)
-        else:
-            return weakref.ref(target)
-    else:
-        if im_self is not None:
-            # Turn a bound method into a BoundMethodWeakref instance.
-            # Keep track of these instances for lookup by disconnect().
-            assert hasattr(target, 'im_func') or hasattr(target, '__func__'), (
-                "safe_ref target %r has im_self, but no im_func, "
-                "don't know how to create reference" % target)
-            reference = BoundMethodWeakref(target=target, on_delete=on_delete)
-            return reference
+
+    # if 'target' is a bound method, wrap it in a BoundMethodWeakref
+    if hasattr(target, '__self__'):
+        if not hasattr(target, '__func__'):
+            raise TypeError(f'Target {target} is bound but not a method')
+        return BoundMethodWeakref(target, on_delete)
+
+    # if on_delete was specified, pass it to weakref.ref too
+    if on_delete:
+        if not callable(on_delete):
+            raise TypeError("Keyword argument 'on_delete' must be callable")
+        return weakref.ref(target, on_delete)
+
+    return weakref.ref(target)
 
 
 class BoundMethodWeakref(object):
