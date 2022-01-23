@@ -72,7 +72,7 @@ class BoundMethodWeakref:
     Attributes:
 
     - ``key``: The identity key for the reference, calculated by the
-      class's get_reference_key method applied to the target instance method.
+      class's get_instance_key method applied to the target instance method.
 
     - ``deletion_methods``: Sequence of callable objects taking single
       argument, a reference to this object which will be called when
@@ -88,7 +88,7 @@ class BoundMethodWeakref:
 
     - ``_all_instances``: Class attribute pointing to all live
       BoundMethodWeakref objects indexed by the class's
-      get_reference_key(target) method applied to the target objects.
+      get_instance_key(target) method applied to the target objects.
       This weak value dictionary is used to short-circuit creation so
       that multiple references to the same (object, function) pair
       produce the same BoundMethodWeakref instance.
@@ -99,7 +99,7 @@ class BoundMethodWeakref:
     def __new__(cls, target, on_delete=None, *arguments, **named):
         """interrupts normal object creation process to add the instance to _all_instances"""
 
-        instance_key = cls.get_reference_key(target)
+        instance_key = cls.get_instance_key(target)
 
         # if 'target' is already in _all_instances for whatever reason
         if instance_key in cls._all_instances:
@@ -112,30 +112,26 @@ class BoundMethodWeakref:
         return obj
 
     def __init__(self, target, on_delete=None):
-        """Return a weak-reference-like instance for a bound method.
+        """returns a weak-reference-like instance for a bound method.
 
-        - ``target``: The instance-method target for the weak reference,
+        - ``target``: the target for the weak reference,
           must have im_self and im_func attributes and be
-          reconstructable via the following, which is true of built-in
-          instance methods::
+          reconstructable by: target.im_func.__get__(target.im_self)
 
-            target.im_func.__get__( target.im_self )
-
-        - ``on_delete``: Optional callback which will be called when
+        - ``on_delete``: optional callback which will be called when
           this weak reference ceases to be valid (i.e. either the
-          object or the function is garbage collected).  Should take a
-          single argument, which will be passed a pointer to this
-          object.
+          object or the function is garbage collected); should take a single
+          argument
         """
 
         self.deletion_methods = [on_delete]
-        self.key = self.get_reference_key(target)
-        im_self = target.__self__
-        im_func = target.__func__
-        self.weak_self = weakref.ref(im_self, self._remove)
-        self.weak_func = weakref.ref(im_func, self._remove)
-        self.self_name = str(im_self)
-        self.func_name = str(im_func.__name__)
+        self.key = self.get_instance_key(target)
+
+        self.weak_self = weakref.ref(target.__self__, self._remove)
+        self.weak_func = weakref.ref(target.__func__, self._remove)
+        
+        self.self_name = str(target.__self__)
+        self.func_name = str(target.__func__)
 
     def _remove(self, weak):
         """Set self.isDead to True when method or instance is destroyed."""
@@ -158,7 +154,7 @@ class BoundMethodWeakref:
                            'cleanup function %s: %s' % (self, function, e))
 
     @staticmethod
-    def get_reference_key(target):
+    def get_instance_key(target):
         """Calculate the reference key for this reference.
 
         Currently this is a two-tuple of the id()'s of the target
