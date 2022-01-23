@@ -32,7 +32,6 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-"""Refactored 'safe reference from dispatcher.py"""
 
 import operator
 import sys
@@ -40,11 +39,8 @@ import traceback
 import weakref
 
 
-try:
-    callable
-except NameError:
-    def callable(object):
-        return hasattr(object, '__call__')
+def callable(object):
+    return hasattr(object, '__call__')
 
 
 if sys.version_info < (3,):
