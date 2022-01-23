@@ -127,33 +127,35 @@ class BoundMethodWeakref:
           single argument, which will be passed a pointer to this
           object.
         """
-        def remove(weak, self=self):
-            """Set self.isDead to True when method or instance is destroyed."""
-            methods = self.deletion_methods[:]
-            del self.deletion_methods[:]
-            try:
-                del self.__class__._all_instances[self.key]
-            except KeyError:
-                pass
-            for function in methods:
-                try:
-                    if callable(function):
-                        function(self)
-                except Exception:
-                    try:
-                        traceback.print_exc()
-                    except AttributeError:
-                        e = sys.exc_info()[1]
-                        print ('Exception during saferef %s '
-                               'cleanup function %s: %s' % (self, function, e))
+
         self.deletion_methods = [on_delete]
         self.key = self.get_reference_key(target)
         im_self = target.__self__
         im_func = target.__func__
-        self.weak_self = weakref.ref(im_self, remove)
-        self.weak_func = weakref.ref(im_func, remove)
+        self.weak_self = weakref.ref(im_self, self._remove)
+        self.weak_func = weakref.ref(im_func, self._remove)
         self.self_name = str(im_self)
         self.func_name = str(im_func.__name__)
+
+    def _remove(self, weak):
+        """Set self.isDead to True when method or instance is destroyed."""
+        methods = self.deletion_methods[:]
+        del self.deletion_methods[:]
+        try:
+            del self.__class__._all_instances[self.key]
+        except KeyError:
+            pass
+        for function in methods:
+            try:
+                if callable(function):
+                    function(self)
+            except Exception:
+                try:
+                    traceback.print_exc()
+                except AttributeError:
+                    e = sys.exc_info()[1]
+                    print ('Exception during saferef %s '
+                           'cleanup function %s: %s' % (self, function, e))
 
     @staticmethod
     def get_reference_key(target):
