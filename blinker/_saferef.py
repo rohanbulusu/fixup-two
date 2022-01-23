@@ -135,10 +135,11 @@ class BoundMethodWeakref:
     def _remove(self, weak):
         """delete all references to both the object's owner (__self__)
            and the method instance (__func__)"""
-           
+
         # remove the instance from BoundMethodWeakref._all_instances
         del self.__class__._all_instances[self.key]
 
+        # run all the cleanup methods in self.deletion_methods
         for cleanup_method in self.deletion_methods:
             cleanup_method(self)
 
@@ -148,12 +149,8 @@ class BoundMethodWeakref:
 
     @staticmethod
     def get_instance_key(target):
-        """Calculate the reference key for this reference.
-
-        Currently this is a two-tuple of the id()'s of the target
-        object and the target function respectively.
-        """
-        return (id(target.__self__), id(target.__func__))
+        """Calculate the reference key for the given target"""
+        return hash(id(target.__self__), id(target.__func__))
 
     def __repr__(self):
         """Give a friendly representation of the object."""
