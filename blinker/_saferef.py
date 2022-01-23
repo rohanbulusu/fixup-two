@@ -146,19 +146,13 @@ class BoundMethodWeakref:
         # remove all references to the BoundMethodWeakref's cleanup methods
         del self.deletion_methods
 
-
     @staticmethod
     def get_instance_key(target):
         """calculates the reference key for the given target"""
         return hash((id(target.__self__), id(target.__func__)))
 
     def __repr__(self):
-
         return f'{self.__class__.__name__}({self.self_name}.{self.func_name})'
-
-    def __nonzero__(self):
-        """Whether we are still a valid reference."""
-        return self() is not None
 
     def __cmp__(self, other):
         """Compare with another reference."""
